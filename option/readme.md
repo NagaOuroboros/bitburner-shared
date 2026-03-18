@@ -21,7 +21,7 @@ const maybeNumber = Result.fromNullable(array[1]);
 In this example, `maybeNumber` is of type `Option<number>`, which <u>may be</u> a number (`Some<number>`), or it could be nothing (`None`).  To resolve this possibility, we must **consume** the `Option`, using one of a few methods provided by the underlying objects.
 
 ### Type Guards - `isSome()` and `isNone()`
-The first method of consuming an `Option` is with its in-built type guard methods, `Option.isSome()` and `Option.isNone()`.  These allow TypeScript to use its type narrowing logic to identify when the option is guaranteed to be either `Some<T>` or `None`.
+The first method of consuming an `Option` is with its in-built type guard methods, `Option.isSome()` and `Option.isNone()`.  These allow TypeScript to use its type narrowing logic to identify when the `Option` is guaranteed to be either `Some<T>` or `None`.
 ```ts
 const array: number[] = [2, 4, 6, 8, 10];
 
@@ -39,7 +39,7 @@ ns.tprint(output);
 In the above example, by checking if the `Option<number>` is an instance of `None`, TypeScript can infer that, since the function returns early if the value is `None`, `maybeNumber` must be `Some<number>` after the `if` block, which exposes the `value` field to be read.  If we were to run this script, the terminal would print `Index 1 is 4`.  However, if we were to check index 5, which would be accessing an index that does not yet have a value, the terminal would print `Index 5 is undefined`.
 
 ### Unwrapping - `unwrap()` and `unwrapOr()`
-The second method is to directly unwrap (or access) the underlying value using `Option.unwrap()` or `Option.unwrapOr()`. These both will return the underlying `value` in the case that it is an instance of `Some<T>`.  How they differ is in what happens if the underlying type is `None`.  `Option.unwrap()` will throw an Error in this case, making it **_unsafe_** unless you can guarantee it's only called on a `Some<T>` instance.  For this reason `Option.unwrapOr()` is the preferred way to direclty unwrap an `Option<T>`. The way it works is that you can provide a fallback value to return, in the case the underlying object is an instance of `None`.
+The second method is to directly unwrap (or access) the underlying value using `Option.unwrap()` or `Option.unwrapOr()`. These both will return the underlying `value` in the case that it is an instance of `Some<T>`.  How they differ is in what happens if the underlying type is `None`.  `Option.unwrap()` will throw an Error in this case, making it **_unsafe_** unless you can guarantee it's only called on a `Some<T>` instance.  For this reason `Option.unwrapOr()` is the preferred way to directly unwrap an `Option<T>`. The way it works is that you can provide a fallback value to return, in the case the underlying object is an instance of `None`.
 ```ts
 const array: number[] = [2, 4, 6, 8, 10];
 

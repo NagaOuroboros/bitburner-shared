@@ -109,7 +109,8 @@ The second primary advantage of `Option` is that you don't need to immediately c
 ### MAPPING - `map()`
 Much like the array method, `Option.map()` allows you to apply a function to the underlying value, and returns a new `Option` with the transformed value, or, if the original `Option` was an instance of `None`, `Option.map()` does nothing, and keeps the underlying `None`.  Let's use our simple `upperCase()` function from the previous section in a simple example:
 ```ts
-// Let us assume this function returns a generated non-empty string or a generated number at random, so we cannot know which type "value" might be
+// Let us assume this function returns a generated non-empty string or a generated number at random,
+// so we cannot know which type "value" might be
 declare function getRandomValue(): string | number;
 
 const value = getRandomValue();
@@ -122,8 +123,9 @@ In this example, we want to get an array of capital letters, but the value we're
 ### FLATMAPPING - `andThen()` and `orElse()`
 The `Option.andThen()` method is analogous to the `Array.flatmap()` method. It allows the underlying value of a `Some<T>` to be passed into a function that itself returns some type of `Option`.  Like `Option.map()`, if the underlying type is `None`, it simply passes that along, because there's nothing to do in that case.  Let's expand on our above example to demonstrate:
 ```ts
-// Let's assume we have a function called "returnVowels", which takes a string and returns an array of only the individual vowels it contains
-// It returns that array as a "Some<string[]>", and returns a "None" instance if there were no vowels
+// Let's assume we have a function called "returnVowels", which takes a string and returns an array of only
+// the individual vowels it contains. It returns that array as a "Some<string[]>", and returns a "None" instance 
+// if there were no vowels
 declare function returnVowels(string: string): Option<string[]>
 
 const value: string | number = getRandomValue();

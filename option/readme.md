@@ -19,7 +19,7 @@ const array: number[] = [2, 4, 6, 8];
 const index: 1;
 const maybeNumber = Result.fromNullable(array[index]);
 ```
-In this example, `maybeNumber` is of type `Option<number>`, which __may be__ a number (`Some<number>`), or it could be nothing (`None`).  To resolve this possibility, we must **consume** the `Option`, using one of a few methods provided by the underlying objects.
+In this example, `maybeNumber` is of type `Option<number>`, which **_may be_** a number (`Some<number>`), or it could be nothing (`None`).  To resolve this possibility, we must **consume** the `Option`, using one of a few methods provided by the underlying objects.
 
 ### Type Guards - `isSome()` and `isNone()`
 The first method of consuming an `Option` is with its in-built type guard methods, `Option.isSome()` and `Option.isNone()`.  These allow TypeScript to use its type narrowing logic to identify when the `Option` is guaranteed to be either `Some<T>` or `None`.
@@ -147,4 +147,4 @@ const arrayOfCharacters: string[] = upperCase(value)
 ```
 In this example, if `getRandomValue()` returns a number, and the `Option<string>` from `upperCase()` is therefore a `None`, `Option.orElse()` will inject the `Option<string>` returned from `stringifyNumber()` into the chain.  Note that this must happen before `Option.map()`, since that call changes the underlying value from `string` to `string[]`, and therefore `Option<string>` would not be allowed.  Only an `Option<string[]>` would be permitted at that point.  A second note is that `Option.orElse()` only expects the `Option<T>` value itself as a parameter, unlike `Option.andThen()` which needs to call a function on an underlying value.  Since the value provided by `Option.orElse()` is only used when the underlying instance is `None`, there is no value to operate on, so directly passing in the result of `stringifyNumber()` is all that's needed.
 
-__Side Note__: In the above example, it would actually be completely safe to use the bare `Option.unwrap()` call at the end of the chain, since we have actually handled both the `string` and `number` cases, and guaranteed that a `string[]` will always be the end result.  It is always safer to use `Option.unwrapOr()` anyways to avoid accidentally missing an edge case where the `Option` could still be `None`, but sometimes you may decide that such an edge case __should__ throw an Error, and that is where `Option.unwrap()` may be used.
+**Side Note**: In the above example, it would actually be completely safe to use the bare `Option.unwrap()` call at the end of the chain, since we have actually handled both the `string` and `number` cases, and guaranteed that a `string[]` will always be the end result.  It is always safer to use `Option.unwrapOr()` anyways to avoid accidentally missing an edge case where the `Option` could still be `None`, but sometimes you may decide that such an edge case _should_ throw an Error, and that is where `Option.unwrap()` may be used.

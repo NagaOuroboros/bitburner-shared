@@ -19,7 +19,7 @@ const array: number[] = [2, 4, 6, 8];
 const index: 1;
 const maybeNumber = Result.fromNullable(array[index]);
 ```
-In this example, `maybeNumber` is of type `Option<number>`, which <u>may be</u> a number (`Some<number>`), or it could be nothing (`None`).  To resolve this possibility, we must **consume** the `Option`, using one of a few methods provided by the underlying objects.
+In this example, `maybeNumber` is of type `Option<number>`, which __may be__ a number (`Some<number>`), or it could be nothing (`None`).  To resolve this possibility, we must **consume** the `Option`, using one of a few methods provided by the underlying objects.
 
 ### Type Guards - `isSome()` and `isNone()`
 The first method of consuming an `Option` is with its in-built type guard methods, `Option.isSome()` and `Option.isNone()`.  These allow TypeScript to use its type narrowing logic to identify when the `Option` is guaranteed to be either `Some<T>` or `None`.
@@ -82,7 +82,7 @@ ns.tprint(`Index ${index} is ${output}`);
 ```
 While a bit contrived, here we can demonstrate how `Option.match()` works, and how it can run more complex logic when needed.  Of crucial note, both functions passed to `Option.match()` must return a value of the same type, so in this case, both need to return strings.
 
-## - USAGE - `some()` and `none()`
+## USAGE - `some()` and `none()`
 `Option` is at its most powerful when used in a function or method of your own creation, allowing you to explicitly return 'nothing' from a function without using `null` or `undefined`.  Let's build a simple example: a function that takes a value and, if that value is a string, calls `toUpperCase()` on it.  If it's not a string, it returns `null`.
 ```ts
 function upperCase(value: unknown): string | null {
@@ -103,7 +103,7 @@ function upperCase(value: unknown): Option<string> {
 ```
 This version of our function returns the `Option<string>` type, which ensures we can't try to use the new upper case string until we account for the possible `None` type, either by using the type guards, unwrapping, or matching methods.  It should be noted that we should always specify the return type as `Option<string>` (replace "string" with the expected type) in order for TypeScript to ensure we handle the return cases properly, and to not end up with the more confusing inferred type `Some<string> | None`; which is technically correct, but less readable and clear.  Additionally, while it is possible to only return one or the other, generally `Option.none()` and `Option.some()` should be used together in functions which have multiple return statements, at least one of which represents returning "no data".
 
-## - CHAINING - `map()`, `andThen()`, `orElse()`
+## CHAINING - `map()`, `andThen()`, `orElse()`
 The second primary advantage of `Option` is that you don't need to immediately consume the `Option` to manipulate the underlying value.  `Option.map()`, `Option.andThen()`, and `Option.orElse()` can be used without consuming the `Option`, and will do their job at runtime depending on which underlying instance (`Some<T>` or `None`) they're called on.  This works because these methods only do work if they are called on the correct underlying object, and otherwise simply return the existing object, all while preserving the `Option` type.
 
 ### MAPPING - `map()`
@@ -147,4 +147,4 @@ const arrayOfCharacters: string[] = upperCase(value)
 ```
 In this example, if `getRandomValue()` returns a number, and the `Option<string>` from `upperCase()` is therefore a `None`, `Option.orElse()` will inject the `Option<string>` returned from `stringifyNumber()` into the chain.  Note that this must happen before `Option.map()`, since that call changes the underlying value from `string` to `string[]`, and therefore `Option<string>` would not be allowed.  Only an `Option<string[]>` would be permitted at that point.  A second note is that `Option.orElse()` only expects the `Option<T>` value itself as a parameter, unlike `Option.andThen()` which needs to call a function on an underlying value.  Since the value provided by `Option.orElse()` is only used when the underlying instance is `None`, there is no value to operate on, so directly passing in the result of `stringifyNumber()` is all that's needed.
 
-<u>Side Note</u>: In the above example, it would actually be completely safe to use the bare `Option.unwrap()` call at the end of the chain, since we have actually handled both the `string` and `number` cases, and guaranteed that a `string[]` will always be the end result.  It is always safer to use `Option.unwrapOr()` anyways to avoid accidentally missing an edge case where the `Option` could still be `None`, but sometimes you may decide that such an edge case <u>should</u> throw an Error, and that is where `Option.unwrap()` can be used.
+__Side Note__: In the above example, it would actually be completely safe to use the bare `Option.unwrap()` call at the end of the chain, since we have actually handled both the `string` and `number` cases, and guaranteed that a `string[]` will always be the end result.  It is always safer to use `Option.unwrapOr()` anyways to avoid accidentally missing an edge case where the `Option` could still be `None`, but sometimes you may decide that such an edge case __should__ throw an Error, and that is where `Option.unwrap()` may be used.

@@ -20,7 +20,7 @@ const didNuke = Result.fromThrowable(() => ns.nuke("silver-helix"));
 In this example, `didNuke` is of type `Result<boolean, Error>`, which could be a boolean (`Ok<boolean>`), or it could be an Error object (`Err<Error>`).  To handle these possibilities, we must **consume** the `Result`, using one of a few methods provided by the underlying objects.  The only difference between `Result.fromThrowable()` and `Result.fromThrowableAsync()` is that the latter must be awaited and is only meant for use with async functions that throw errors when they reject. In most cases, you will only need `Result.fromThrowable()` in Bitburner.
 
 ### Type Guards - `isOk()` and `isErr()`
-The first method of consuming a `Result` is with its in-built type guard methods, `Result.isOk()` and `Result.isErr()`.  These allow TypeScript to use its type narrowing logic to identify when the `Option` is guaranteed to be either `Ok<T>` or `Err<E>`.
+The first method of consuming a `Result` is with its in-built type guard methods, `Result.isOk()` and `Result.isErr()`.  These allow TypeScript to use its type narrowing logic to identify when the `Result` is guaranteed to be either `Ok<T>` or `Err<E>`.
 ```ts
 const target = "silver-helix";
 const didNuke: Result<boolean, Error> = Result.fromThrowable(() => ns.nuke(target));
@@ -114,7 +114,7 @@ const arrayOfCapitalVowels: string[] = upperCase(value)
 ```
 The main difference between `Result.map()` and `Result.andThen()` is that the function passed to `Result.andThen()` must return a new `Result<T, E>`, while the function passed to `Result.map()` only changes the value within an existing `Ok<T>`.  In this example, `returnVowels()` is chained into the sequence with `Result.andThen()`, and just like with `Result.map()` only executes its logic if the underlying instance it gets from `upperCase()` is `Ok<string>`, otherwise, it propagates `Err<TypeError>` forward.  The difference is that if `returnVowels()` returns `Err<null>`, then that `Err<null>` gets propagated forward instead of the `Ok<string>` that came from `upperCase()`.
 
-`Option.orElse()` is also a flatmap method, however it operates on the condition that if it is called on an `Ok<T>`, it will simply propagate that forward, **or else**, if the value is `Err<E>`, it will perform its logic on the underlying `Err.error` value and return a new `Result<T, E>` into the chain.
+`Result.orElse()` is also a flatmap method, however it operates on the condition that if it is called on an `Ok<T>`, it will simply propagate that forward, **or else**, if the value is `Err<E>`, it will perform its logic on the underlying `Err.error` value and return a new `Result<T, E>` into the chain.
 ```ts
 // Let's have a function that takes a number and converts it into its string representation
 // It returns a string as an "Ok<string>", and returns a "Err<TypeError>" instance if the value was not a number
@@ -122,7 +122,7 @@ declare function stringifyNumber(value: unknown): Result<string, TypeError>;
 
 const value: string | number = getRandomValue();
 const arrayOfCharacters: string[] = upperCase(value)
-  .orElse((_) => stringifyNumber(value));
+  .orElse((_) => stringifyNumber(value))
   .map(string => string.split(""))
   .unwrapOr([]);
 ```

@@ -21,7 +21,7 @@ const maybeNumber = Result.fromNullable(array[1]);
 In this example, `maybeNumber` is of type `Option<number>`, which <u>may be</u> a number (`Some<number>`), or it could be nothing (`None`).  To resolve this possibility, we must **consume** the `Option`, using one of a few methods provided by the underlying objects.
 
 ### Type Guards - `isSome()` and `isNone()`
-The first method of consuming an `Option` is with its in-built type guard methods, `Option.isSome()` and `Option.isNone()`.  These allow TypeScript to use it type narrowing logic to define how to handle the two possible cases.
+The first method of consuming an `Option` is with its in-built type guard methods, `Option.isSome()` and `Option.isNone()`.  These allow TypeScript to use its type narrowing logic to identify when the option is guaranteed to be either `Some<T>` or `None`.
 ```ts
 const array: number[] = [2, 4, 6, 8, 10];
 

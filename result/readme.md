@@ -1,5 +1,5 @@
 # RESULT
-This module allows for the safe handling of errors without propagating throwing exceptions, which can needlessly halt the script.  It accomplishes this by wrapping success values in an instance of a `Ok<T>` object, or returning error values in a `Err<E>` object.  The main type, `Result<T, E>`, is a union of these two possible types.  The underlying objects are instantiated from implementations of a shared interface which provides methods to chain operations and safely handle error states.  For those familiar with Rust or Functional Programming, it should feel familiar.
+This module allows for the safe handling of errors without throwing exceptions, which can needlessly halt the script.  It accomplishes this by wrapping success values in an instance of an `Ok<T>` object, or returning error values in an `Err<E>` object.  The main type, `Result<T, E>`, is a union of these two possible types.  The underlying objects are instantiated from implementations of a shared interface which provides methods to chain operations and safely handle error states.  For those familiar with Rust or Functional Programming, it should feel familiar.
 
 
 ## IMPORTING
@@ -37,7 +37,7 @@ if (didNuke.value) {
 In the above example, by checking if the `Result<boolean, Error>` is an instance of `Err<Error>`, TypeScript can infer that, since we return early in that block, `didNuke` must be `Ok<boolean>` after the first `if` block, which exposes the `value` field to be read. `Ok.value` is only accessible when TypeScript knows for certain that the `Result` is definitively an instance of `Ok<T>`, and likewise `Err.error` is only available when TypeScript knows it's an `Err<E>`, like inside the first `if` block.  
 
 ### Unwrapping - `unwrap()` and `unwrapOr()`
-The second method is to directly unwrap (or access) the underlying value using `Result.unwrap()` or `Result.unwrapOr()`. These both will return the underlying `value` in the case that it is an instance of `Ok<T>`.  How they differ is in what happens if the underlying type is `Err<E>`.  `Result.unwrap()` will throw an Error in this case, making it **_unsafe_** unless you can guarantee it's only called on an `Ok<T>` instance.  For this reason `Result.unwrapOr()` is the preferred way to directly unwrap an `Result<T, E>`. The way it works is that you must provide a fallback value to return, in the case the underlying object is an instance of `Err<E>`.
+The second method is to directly unwrap (or access) the underlying value using `Result.unwrap()` or `Result.unwrapOr()`. These both will return the underlying `value` in the case that it is an instance of `Ok<T>`.  How they differ is in what happens if the underlying type is `Err<E>`.  `Result.unwrap()` will throw an Error in this case, making it **_unsafe_** unless you can guarantee it's only called on an `Ok<T>` instance.  For this reason `Result.unwrapOr()` is the preferred way to directly unwrap a `Result<T, E>`. The way it works is that you must provide a fallback value to return when the underlying object is an instance of `Err<E>`.
 ```ts
 const target = "silver-helix";
 const didNuke: boolean = Result.fromThrowable(() => ns.nuke(target)).unwrapOr(false);
@@ -86,7 +86,7 @@ This version of our function returns the `Result<string, TypeError>` type, which
 The second primary advantage of `Result` is that you don't need to immediately consume the `Result` to manipulate the underlying value.  `Result.map()`, `Result.mapErr()`, `Result.andThen()`, and `Result.orElse()` can be used without consuming the `Result`, and will do their job at runtime depending on which underlying instance (`Ok<T>` or `Err<E>`) they're called on.  This works because these methods only do work if they are called on the correct underlying object, and otherwise simply return the existing object, all while preserving the `Result` type.
 
 ### MAPPING - `map()` and `mapErr()`
-Much like the array method, `Result.map()` and `Result.mapErr()` allow you to apply a function to the underlying value, and returns a new `Result` with the transformed value.  `Result.map()` operates on the `value` field of `Ok<T>`, and `Result.mapErr()` does the same for the `error` field of `Err<E>`.
+Much like the array method, `Result.map()` and `Result.mapErr()` allow you to apply a function to the underlying value, and return a new `Result` with the transformed value.  `Result.map()` operates on the `value` field of `Ok<T>`, and `Result.mapErr()` does the same for the `error` field of `Err<E>`.
 ```ts
 // Let us assume this function returns a generated non-empty string or a generated number at random,
 // so we cannot know which type "value" might be
@@ -97,13 +97,13 @@ const arrayOfCapitalLetters: string[] = upperCase(value)
   .map(string => string.split(""))
   .unwrapOr([]);
 ```
-In this example, we want to get an array of capital letters, but the value we're given could be a string or a number.  When this unknown value is passed into our `upperCase` function, two things could happen: it could be turned into an all-caps string wrapped in a `Ok<string>` type, or it could return a `TypeError` object wrapped in the `Err<TypeError>` type.  The `map()` method then acts like an implicit `if` statement: **if** the underlying value is `Ok<string>`, it will transform it into a `Ok<string[]>` by splitting the string into an array of its letters and wrapping it in a new `Ok` instance, and otherwise it will simply 'pass along' the underlying `Err<TypeError>` and do nothing.  This means we now have a type of `Result<string[], TypeError>`.  We choose unwrap it by using `Result.unwrapOr()` and use an empty array as the fallback, ensuring we get an array as out final value; either one full of capital letters, or an empty one in the case the value was a number.
+In this example, we want to get an array of capital letters, but the value we're given could be a string or a number.  When this unknown value is passed into our `upperCase` function, two things could happen: it could be turned into an all-caps string wrapped in a `Ok<string>` type, or it could return a `TypeError` object wrapped in the `Err<TypeError>` type.  The `map()` method then acts like an implicit `if` statement: **if** the underlying value is `Ok<string>`, it will transform it into an `Ok<string[]>` by splitting the string into an array of its letters and wrapping it in a new `Ok` instance, and otherwise it will simply 'pass along' the underlying `Err<TypeError>` and do nothing.  This means we now have a type of `Result<string[], TypeError>`.  We choose unwrap it by using `Result.unwrapOr()` and use an empty array as the fallback, ensuring we get an array as our final value; either one full of capital letters, or an empty one in the case the value was a number.
 
 ### FLATMAPPING - `andThen()` and `orElse()`
 The `Result.andThen()` method is analogous to the `Array.flatmap()` method. It allows the underlying value of a `Ok<T>` to be passed into a function that itself returns some type of `Result`.  Like `Result.map()`, if the underlying type is `Err<E>`, it simply passes that along, because there's nothing to do in that case.  Let's expand on our above example to demonstrate:
 ```ts
 // Let's assume we have a function called "returnVowels", which takes a string and returns an array of only
-// the individual vowels it contains. It returns that array as a "Ok<string[]>", and returns a "Err<null>" instance 
+// the individual vowels it contains. It returns that array as an "Ok<string[]>", and returns an "Err<null>" instance 
 // if there were no vowels
 declare function returnVowels(string: string): Result<string[], null>
 
@@ -117,7 +117,7 @@ The main difference between `Result.map()` and `Result.andThen()` is that the fu
 `Result.orElse()` is also a flatmap method, however it operates on the condition that if it is called on an `Ok<T>`, it will simply propagate that forward, **or else**, if the value is `Err<E>`, it will perform its logic on the underlying `Err.error` value and return a new `Result<T, E>` into the chain.
 ```ts
 // Let's have a function that takes a number and converts it into its string representation
-// It returns a string as an "Ok<string>", and returns a "Err<TypeError>" instance if the value was not a number
+// It returns a string as an "Ok<string>", and returns an "Err<TypeError>" instance if the value was not a number
 declare function stringifyNumber(value: unknown): Result<string, TypeError>;
 
 const value: string | number = getRandomValue();

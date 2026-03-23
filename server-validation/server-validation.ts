@@ -1,7 +1,7 @@
 // By using a unique symbol as the brand, we ensure the brand only exists at the type level and can't be autocompleted by accident
 declare const __brand: unique symbol;
 /** Type for marking primitives as particular sub-types */
-export type Brand<T, B extends string> = T & { [__brand]: B };
+type Brand<T, B extends string> = T & { [__brand]: B };
 
 /** Marks a string as being a valid server hostname */
 export type Hostname = Brand<string, "hostname">;
@@ -16,10 +16,20 @@ export type ServerID = Hostname | IPAddress;
 /**
  * A sub-class of Error for failed validations
  */
-export class ValidationError extends Error {
+class ValidationError extends Error {
   constructor(message?: string, options?: ErrorOptions) {
     super(message, options);
     this.name = 'ValidationError';
+  }
+}
+/** A simple tuple result type */
+type SimpleResult<E, T> = [E, null] | [null, T]
+/** A helper function that takes a parsing function and wraps the retrun in a `SimpleResult` */
+function toSimpleResult<T>(parseFn: () => T): SimpleResult<ValidationError, T> {
+  try {
+    return [null, parseFn()];
+  } catch (e: unknown) {
+    return e instanceof ValidationError ? [e, null] : [new ValidationError(`${e}`), null];
   }
 }
 
@@ -58,6 +68,15 @@ export function parseIPAddress(ns: NS, value: unknown): IPAddress {
   assertIPAddress(ns, value);
   return value;
 }
+/**
+ * Validates a value and returns a tuple in which the first element is possibly a `ValidationError` object or null, and the second is an IP address or null\
+ * If one element is null, the other is guaranteed to be defined
+ * @remarks RAM cost: 0.1 GB\
+ * [`ns.serverExists`]
+ */
+export function validateIPAddress(ns: NS, value: unknown): SimpleResult<ValidationError, IPAddress> {
+  return toSimpleResult(() => parseIPAddress(ns, value));
+}
 
 /*
  * Hostname Validation
@@ -71,7 +90,8 @@ export function parseIPAddress(ns: NS, value: unknown): IPAddress {
  */
 export function isHostname(ns: NS, value:unknown): value is Hostname {
   if (typeof value !== 'string') return false;
-  if (isIPAddress(ns, value)) return false;
+  const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  if (ipRegex.test(value)) return false;
   return ns.serverExists(value);
 }
 /**
@@ -92,6 +112,15 @@ export function assertHostname(ns: NS, value: unknown): asserts value is Hostnam
 export function parseHostname(ns: NS, value: unknown): Hostname {
   assertHostname(ns, value);
   return value;
+}
+/**
+ * Validates a value and returns a tuple in which the first element is possibly a `ValidationError` object or null, and the second is a Hostname or null\
+ * If one element is null, the other is guaranteed to be defined
+ * @remarks RAM cost: 0.1 GB\
+ * [`ns.serverExists`]
+ */
+export function validateHostname(ns: NS, value: unknown): SimpleResult<ValidationError, Hostname> {
+  return toSimpleResult(() => parseHostname(ns, value));
 }
 
 /*
@@ -126,51 +155,12 @@ export function parseServerID(ns: NS, value: unknown): ServerID {
   assertServerID(ns, value);
   return value;
 }
-
-type ServerValidator = (ns: NS) => {
-  /** Checks if `value` is an existing IP address */
-  isIPAddress: (value: unknown) => value is IPAddress;
-  /** Checks if `value` is an existing Hostname */
-  isHostname: (value: unknown) => value is Hostname;
-  /** Checks if `value` is an existing server identifier (IP or Hostname) */
-  isServerID: (value: unknown) => value is ServerID;
-  /** @throws Throws a `ValidationError` if `value` does not resolve to an existing IP address */
-  assertIPAddress: (value: unknown) => asserts value is IPAddress;
-  /** @throws Throws a `ValidationError` if `value` does not resolve to an existing Hostname */
-  assertHostname: (value: unknown) => asserts value is Hostname;
-  /** @throws Throws a `ValidationError if `value` does not resolve to an existing server */
-  assertServerID: (value: unknown) => asserts value is ServerID;
-  /**
-   * @throws Throws a `ValidationError` if `value` does not resolve to an existing IP address
-   * @returns `value` as an `IPAddress`
-   */
-  parseIPAddress: (value: unknown) => IPAddress;
-  /**
-   * @throws Throws a `ValidationError` if `value` does not resolve to an existing Hostname
-   * @returns `value` as `Hostname`
-   */
-  parseHostname: (value: unknown) => Hostname;
-  /**
-   * @throws Throws a `ValidationError` if `value` does not resolve to an existing server
-   * @returns `value` as `ServerID`
-   */
-  parseServerID: (value: unknown) => ServerID;
-}
-
 /**
- * A factory function which returns an object containing all server validation functions as methods
+ * Validates a value and returns a tuple in which the first element is possibly a `ValidationError` object or null, and the second is a server identifier (IP or Hostname) or null\
+ * If one element is null, the other is guaranteed to be defined
  * @remarks RAM cost: 0.1 GB\
  * [`ns.serverExists`]
- * @param ns The current script's Netscript instance
  */
-export const createServerValidator: ServerValidator = (ns: NS) => ({
-    isIPAddress: (value: unknown): value is IPAddress => isIPAddress(ns, value),
-    isHostname: (value: unknown): value is Hostname => isHostname(ns, value),
-    isServerID: (value: unknown): value is ServerID => isServerID(ns, value),
-    assertIPAddress: (value: unknown): asserts value is IPAddress => assertIPAddress(ns, value),
-    assertHostname: (value: unknown): asserts value is Hostname => assertHostname(ns, value),
-    assertServerID: (value: unknown): asserts value is ServerID => assertServerID(ns, value),
-    parseIPAddress: (value: unknown): IPAddress => parseIPAddress(ns, value),
-    parseHostname: (value: unknown): Hostname => parseHostname(ns, value),
-    parseServerID: (value: unknown): ServerID => parseServerID(ns, value),
-});
+export function validateServerID(ns: NS, value: unknown): SimpleResult<ValidationError, ServerID> {
+  return toSimpleResult(() => parseServerID(ns, value));
+}

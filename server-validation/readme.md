@@ -29,7 +29,7 @@ The types that are exported from the module and/or returned by the various funct
 If your game version is 2.8.1, you should stick to using `Hostname`-based validation, as that version of the game does not fully allow the use of IP addresses as string identifiers for servers.
 Going forward, we will assume you are in version 2.8.1 or higher, as hostname identifiers will continue working in 3.0+.  However, everything that applies to using the `Hostname` type functions apply to the other types as well.
 
-## FUNCTIONS
+## USAGE: Functions
 The exported functions fall into four types: guards, assertions, parsers, and validators.  Each type has a function for each, for a total of twelve individual functions.
 
 ### Guard Functions
@@ -50,7 +50,7 @@ export async function main(ns: NS) {
   // . . .
 }
 ```
-Checking for the `false` case first, and then returning, exiting, or throwing an Error, is called an 'early return branch'.  This pattern ensures that TypeScript knows that once we get past this initial `if` check, the `hostname` variable is guaranteed to be a valid server name, and marks it with the custom `Hostname` type.  You could also use this check in `if-else` blocks as well, depending on how you need your logic to work; just keep in mind that the type will only be narrowed within the matching block if neither branch returns or exits.
+Checking for the `false` case first, and then returning, exiting, or throwing an Error, is called an 'early return branch'.  This pattern ensures that TypeScript knows that once we get past this initial `if` check, the `hostname` variable is guaranteed to be a valid server name, and marks it with the custom `Hostname` type.  You could also use this check in `if-else` blocks as well, depending on how you need your logic to work; just keep in mind that the type will only be narrowed within the matching `if` or `else` block if neither branch returns or exits.
 
 ### Assertion Functions
 Assertion functions start with `assert` (e.g. `assertHostname()`) and are a more severe check.  They are used on their own and throw an exception if the value they're given fails to pass the check.
@@ -83,7 +83,7 @@ export async function main(ns: NS) {
 This is even more concise, and does all the work for you.  It takes the initial value, checks it, and returns it as the new type.  This is also a "fail fast" means of type narrowing, but allows you to make the check in the same line that you initialize a validated variable.  This is generally done right before you use the unchecked value to make sure it is validated before it gets passed to some other function or used in type-sensitive logic.
 
 ### Validation Functions
-Validation functions start with `validate` (e.g. validateHostname()) and are a much more graceful way of checking a verifying a value.  They return one of two mutually exclusive tuples: either `[ValidationError, null]` or `[null, Hostname]`.  If the first value, the error, is null, the second value is guaranteed to be a validated string, and vice versa.
+Validation functions start with `validate` (e.g. validateHostname()) and are a much more graceful way of verifying a value.  They return one of two mutually exclusive tuples: either `[ValidationError, null]` or `[null, Hostname]`.  If the first value, the error, is null, the second value is guaranteed to be a validated string, and vice versa.
 ```ts
 import * as serverValidator from "./path/to/server-validation.ts";
 
@@ -98,9 +98,9 @@ export async function main(ns: NS) {
   // . . .
 }
 ```
-This is a more elegant version of the Guard Function.  By returning a tuple with the error first, we are forced to check the error and decide what to do with that case before using the hostname.  Since `null` cannot be passed to functions expecting a `string`, blindly passing `hostname` to such a function will raise an error in TypeScript.  It should be noted that the error is an Error sub-class called `ValidationError`, and has the expected fields such as `Error.message`.
+This is a more elegant version of the Guard Function, combined with the direct assignment of a Parsing Function.  By returning a tuple with the error first, we are forced to check the error and decide what to do with that case before using the hostname.  Since `null` cannot be passed to functions expecting a `string`, blindly passing `hostname` to such a function will raise an error in TypeScript.  It should be noted that the error is an Error sub-class called `ValidationError`, and has the expected fields such as `Error.message`.
 
-## Using the Types
+## USAGE: Types
 If you wish to use the exported types in your own functions, be aware that you must then use one of the associated functions to narrow a string to the correct type.  This is generally a good thing, as you then guarantee your function cannot fail due to invalid strings, or nullish values causing unexpected behavior.
 ```ts
 import * as serverValidator from "./path/to/server-validation.ts";

@@ -1,7 +1,7 @@
 /** A type that represents the possibility of a success or an error */
 export type Result<T,E> = Ok<T, E> | Err<T, E>;
 
-export namespace Result {
+namespace Result {
   /** 
    * Wraps a value in an `Ok` instance
    * @param value The value to be wrapped
@@ -52,6 +52,8 @@ export namespace Result {
   }
 }
 
+Object.freeze(Result);
+export { Result };
 export const ok = Result.ok;
 export const err = Result.err;
 export const fromThrowable = Result.fromThrowable;
@@ -109,6 +111,7 @@ class Ok<T, E> implements IResult<T, E> {
   readonly value: T;
   constructor(value: T) {
     this.value = value;
+    Object.freeze(this);
   }
   isOk(): this is Ok<T, E> {
     return true;
@@ -143,6 +146,7 @@ class Err<T, E> implements IResult<T, E> {
   readonly error: E;
   constructor(error: E) {
     this.error = error;
+    Object.freeze(this);
   }
   isOk(): this is Ok<T, E> {
     return false;

@@ -1,7 +1,7 @@
 /** A type the represents the possible absence of a value */
 export type Option<T> = Some<T> | None;
 
-export namespace Option {
+namespace Option {
   /**
    * Wraps the provided `value` in an instance of `Some`
    * @param value The value to be wrapped
@@ -24,6 +24,8 @@ export namespace Option {
   }
 }
 
+Object.freeze(Option);
+export { Option };
 export const some = Option.some;
 export const none = Option.none;
 export const fromNullable = Option.fromNullable;
@@ -73,6 +75,7 @@ class Some<T> implements IOption<T> {
   readonly value: T;
   constructor(value: T) {
     this.value = value;
+    Object.freeze(this);
   }
   isSome(): this is Some<T> {
     return true;
@@ -102,7 +105,9 @@ class Some<T> implements IOption<T> {
 
 class None implements IOption<never> {
   private static _instance = new None();
-  private constructor(){}
+  private constructor(){
+    Object.freeze(this);
+  }
   public static getInstance(): None {
     return this._instance;
   }

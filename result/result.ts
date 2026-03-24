@@ -1,7 +1,7 @@
 /** A type that represents the possibility of a success or an error */
 export type Result<T,E> = Ok<T, E> | Err<T, E>;
 
-namespace Result {
+export namespace Result {
   /** 
    * Wraps a value in an `Ok` instance
    * @param value The value to be wrapped
@@ -51,9 +51,8 @@ namespace Result {
     }
   }
 }
-
 Object.freeze(Result);
-export { Result };
+
 export const ok = Result.ok;
 export const err = Result.err;
 export const fromThrowable = Result.fromThrowable;
@@ -108,71 +107,71 @@ interface IResult<T,E> {
 }
 
 class Ok<T, E> implements IResult<T, E> {
-  readonly value: T;
+  public readonly value: T;
   constructor(value: T) {
     this.value = value;
     Object.freeze(this);
   }
-  isOk(): this is Ok<T, E> {
+  public isOk(): this is Ok<T, E> {
     return true;
   }
-  isErr(): this is Err<T,E> {
+  public isErr(): this is Err<T,E> {
     return false;
   }
-  unwrap(): T {
+  public unwrap(): T {
     return this.value;
   }
-  unwrapOr<F>(_fallback: F): T {
+  public unwrapOr<F>(_fallback: F): T {
     return this.value;
   }
-  map<U>(fn: (value: T) => U): Result<U, E> {
+  public map<U>(fn: (value: T) => U): Result<U, E> {
     return new Ok(fn(this.value));
   }
-  mapErr<F>(_fn: (error: E) => F): Result<T, F> {
+  public mapErr<F>(_fn: (error: E) => F): Result<T, F> {
     return this as unknown as Result<T, F>;
   }
-  andThen<U, F>(fn: (value: T) => Result<U, F>): Result<U, F> {
+  public andThen<U, F>(fn: (value: T) => Result<U, F>): Result<U, F> {
     return fn(this.value);
   }
-  orElse<U, F>(_fn: (value: E) => Result<U, F>): Result<T, F> {
+  public orElse<U, F>(_fn: (value: E) => Result<U, F>): Result<T, F> {
     return this as unknown as Result<T, F>
   }
-  match<A>(onOk: (value: T) => A, _onErr: (error: E) => A): A {
+  public match<A>(onOk: (value: T) => A, _onErr: (error: E) => A): A {
     return onOk(this.value);
   }
 }
 
 class Err<T, E> implements IResult<T, E> {
-  readonly error: E;
+  public readonly error: E;
   constructor(error: E) {
     this.error = error;
     Object.freeze(this);
   }
-  isOk(): this is Ok<T, E> {
+  public isOk(): this is Ok<T, E> {
     return false;
   }
-  isErr(): this is Err<T,E> {
+  public isErr(): this is Err<T,E> {
     return true;
   }
-  unwrap(): T {
+  public unwrap(): T {
     throw new Error('Attempted to call unwrap on an instance of Err.');
   }
-  unwrapOr<F>(fallback: F): F {
+  public unwrapOr<F>(fallback: F): F {
     return fallback;
   }
-  map<U>(_fn: (value: T) => U): Result<U, E> {
+  public map<U>(_fn: (value: T) => U): Result<U, E> {
     return this as unknown as Result<U, E>;
   }
-  mapErr<F>(fn: (error: E) => F): Result<T, F> {
+  public mapErr<F>(fn: (error: E) => F): Result<T, F> {
     return new Err(fn(this.error));
   }
-  andThen<U, F>(_fn: (value: T) => Result<U, F>): Result<U, E> {
+  public andThen<U, F>(_fn: (value: T) => Result<U, F>): Result<U, E> {
     return this as unknown as Result<U, E>;
   }
-  orElse<U, F>(fn: (error: E) => Result<U, F>): Result<U, F> {
+  public orElse<U, F>(fn: (error: E) => Result<U, F>): Result<U, F> {
     return fn(this.error);
   }
-  match<A>(_onOk: (value: T) => A, onErr: (error: E) => A): A {
+  public match<A>(_onOk: (value: T) => A, onErr: (error: E) => A): A {
     return onErr(this.error);
   }
 }

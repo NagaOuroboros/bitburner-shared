@@ -1,7 +1,7 @@
 /** A type the represents the possible absence of a value */
 export type Option<T> = Some<T> | None;
 
-namespace Option {
+export namespace Option {
   /**
    * Wraps the provided `value` in an instance of `Some`
    * @param value The value to be wrapped
@@ -23,9 +23,8 @@ namespace Option {
     return value == null ? none() : some(value);
   }
 }
-
 Object.freeze(Option);
-export { Option };
+
 export const some = Option.some;
 export const none = Option.none;
 export const fromNullable = Option.fromNullable;
@@ -72,67 +71,65 @@ interface IOption<T> {
 }
 
 class Some<T> implements IOption<T> {
-  readonly value: T;
+  public readonly value: T;
   constructor(value: T) {
     this.value = value;
     Object.freeze(this);
   }
-  isSome(): this is Some<T> {
+  public isSome(): this is Some<T> {
     return true;
   }
-  isNone(): this is None {
+  public isNone(): this is None {
     return false;
   }
-  unwrap(): T {
+  public unwrap(): T {
     return this.value;
   }
-  unwrapOr<F>(_fallback: F): T {
+  public unwrapOr<F>(_fallback: F): T {
     return this.value;
   }
-  map<U>(fn: (value: T) => U): Option<U> {
+  public map<U>(fn: (value: T) => U): Option<U> {
     return new Some(fn(this.value));
   }
-  andThen<U>(fn: (value: T) => Option<U>): Option<U> {
+  public andThen<U>(fn: (value: T) => Option<U>): Option<U> {
     return fn(this.value);
   }
-  orElse(_fallback: Option<T>): Option<T> {
+  public orElse(_fallback: Option<T>): Option<T> {
     return this;
   }
-  match<A>(onSome: (value: T) => A, _onNone: () => A): A {
+  public match<A>(onSome: (value: T) => A, _onNone: () => A): A {
     return onSome(this.value);
   }
 }
 
 class None implements IOption<never> {
   private static _instance = new None();
-  private constructor(){
-    Object.freeze(this);
-  }
+  private constructor(){ Object.freeze(this); }
   public static getInstance(): None {
     return this._instance;
   }
-  isSome(): this is Some<never> {
+  public isSome(): this is Some<never> {
     return false;
   }
-  isNone(): this is None {
+  public isNone(): this is None {
     return true;
   }
-  unwrap(): never {
+  public unwrap(): never {
     throw new Error('Attempted to call unwrap on an instance of None.');
   }
-  unwrapOr<F>(fallback: F): F {
+  public unwrapOr<F>(fallback: F): F {
     return fallback;
   }
-  map<U>(_fn: (value: never) => U): Option<U> {
+  public map<U>(_fn: (value: never) => U): Option<U> {
     return None.getInstance();
   }
-  andThen<U>(_fn: (value: never) => Option<U>): Option<U> {
+  public andThen<U>(_fn: (value: never) => Option<U>): Option<U> {
     return None.getInstance();
   }
-  orElse<T>(fallback: Option<T>): Option<T> {
+  public orElse<T>(fallback: Option<T>): Option<T> {
     return fallback;
   }
-  match<A>(_onSome: (value: never) => A, onNone: () => A): A {
+  public match<A>(_onSome: (value: never) => A, onNone: () => A): A {
     return onNone();
   }
 }

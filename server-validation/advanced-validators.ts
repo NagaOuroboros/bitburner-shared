@@ -15,18 +15,30 @@ function toValidationResult<T>(parseFn: () => T): ValidationResult<T> {
   try {
     return Result.ok(parseFn());
   } catch (e) {
-    return e instanceof ValidationError ? Result.err(e) : Result.err(new ValidationError(`${e}`));
+    return Result.err(e as ValidationError);
   }
 }
-
+/**
+ * Validates `value` and returns a `Result` of either the validated IPAddress string, or a `ValidationError`
+ * @remarks RAM cost: 0.1 GB\
+ * [`ns.serverExists`]
+ */
 export function validateIPAddressWithResult(ns: NS, value: unknown): ValidationResult<IPAddress> {
   return toValidationResult(() => parseIPAddress(ns, value));
 }
-
+/**
+ * Validates `value` and returns a `Result` of either the validated Hostname string, or a `ValidationError`
+ * @remarks RAM cost: 0.1 GB\
+ * [`ns.serverExists`]
+ */
 export function validateHostnameWithResult(ns: NS, value: unknown): ValidationResult<Hostname> {
   return toValidationResult(() => parseHostname(ns, value));
 }
-
+/**
+ * Validates `value` and returns a `Result` of either the validated ServerID string, or a `ValidationError`
+ * @remarks RAM cost: 0.1 GB\
+ * [`ns.serverExists`]
+ */
 export function validateServerIDWithResult(ns: NS, value: unknown): ValidationResult<ServerID> {
   return toValidationResult(() => parseServerID(ns, value));
 }

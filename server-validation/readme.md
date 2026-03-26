@@ -126,3 +126,22 @@ export async function main(ns: NS) {
   // . . .
 }
 ```
+
+# Advanced Validators
+If you use my Result project, the `advanced-validators.ts` file exports a set of validator functions that utilize the full Result type, rather than the simplified tuple-based version of the main file.  Like the main file, functions only cost `0.1GB` of RAM no matter how many you import, so it's safe to import the whole module.
+
+**IMPORTANT NOTE:** The module relies on importing things from both the base `server-validation.ts` file, AND from the `result.ts` project file.  You should adjust the module's import paths to match your file structure accordingly.
+```ts
+import * as advanced from "./path/to/advanced-validators.ts";
+
+export async function main(ns: NS) {
+  const hostname = advanced.validateHostnameWithResult(ns, ns.args[0])
+    .match(
+      (hostname) => hostname,
+      (error) => { ns.tprint(`${error.message}`); ns.exit() }
+    )
+  // Due to the error path exiting (returning `never`), hostname must be the validated `Hostname` type
+  const cash = ns.getServerMoneyAvailable(hostname);
+  // . . .
+}
+```

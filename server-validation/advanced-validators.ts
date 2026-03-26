@@ -1,4 +1,6 @@
+// * * * * * * * * * * * * * * * * * * * * * * *
 // ! Change paths to match your file structure !
+// * * * * * * * * * * * * * * * * * * * * * * *
 import { Result } from "../result/result.ts";
 import { parseIPAddress, parseHostname, parseServerID, type IPAddress, type Hostname, type ServerID } from "./server-validation.ts"
 

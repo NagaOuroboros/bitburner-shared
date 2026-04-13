@@ -67,11 +67,12 @@ export class DatabaseClient {
     const subdir = hash.slice(0, 2);
     const file = `${DB_DIRECTORY}/${subdir}/${hash}.json`
     const tempfile = `${DB_DIRECTORY}/tmp/${hash}-${Math.random().toString(16).slice(2)}.tmp.json`
-    let json = this.#safeStringify(data);
+    let json: string;
     if (this.#ns.fileExists(file)) {
       const filedata = this.#read(hash);
       if (!Array.isArray(filedata)) {
         if (filedata.key === key) {
+          json = this.#safeStringify(data);
           this.#atomicWrite(tempfile, file, json);
           return;
         } else {
@@ -90,6 +91,7 @@ export class DatabaseClient {
       this.#atomicWrite(tempfile, file, json);
       return;
     }
+    json = this.#safeStringify(data);
     this.#atomicWrite(tempfile, file, json);
   }
   #read(hash: string): Entry | Entry[] {

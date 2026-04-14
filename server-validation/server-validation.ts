@@ -134,7 +134,8 @@ export function validateHostname(ns: NS, value: unknown): SimpleResult<Validatio
  * @returns A boolean indicating if the server exists
  */
 export function isServerID(ns: NS, value: unknown): value is ServerID {
-  return ns.serverExists(ns, value);
+  if (typeof value !== 'string') return false;
+  return ns.serverExists(value);
 }
 /**
  * Asserts `value` is a valid server identifier (IP or Hostname)

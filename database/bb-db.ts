@@ -19,6 +19,7 @@ class JSONError extends Error {
     super(message, options);
   }
 }
+
 /**
  * Hashes an arbitrary string into a 64-bit Hex string using the FNV-1a algorithm
  * @param input — The string to be hashed
@@ -60,7 +61,7 @@ export class DatabaseClient {
     if (!this.#ns.fileExists(tempfile)) {
       throw new Error(`Failed to write: ${tempfile}`);
     }
-    this.#ns.mv(this.#ns.self().hostname, tempfile, file);
+    this.#ns.mv(this.#ns.self().server, tempfile, file);
   }
   #write(key: string, data: Entry) {
     const hash = FNV1a_64(key);

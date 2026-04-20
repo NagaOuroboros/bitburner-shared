@@ -2,21 +2,23 @@
  * A JSON-backed KV database
  */
 
-type JSONPrimitive = string | number | boolean | null;
 type JSONValue = JSONPrimitive | JSONArray | JSONObject;
+type JSONPrimitive = string | number | boolean | null;
 type JSONArray = JSONValue[];
 type JSONObject = { [key: string]: JSONValue };
 
 type Entry = { key: string, value: JSONValue };
 
 class MissingKeyError extends Error {
-  constructor(message: string, options?: ErrorOptions) {
+  constructor(message?: string, options?: ErrorOptions) {
     super(message, options);
+    this.name = 'MissingKeyError';
   }
 }
 class JSONError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
+    this.name = 'JSONError';
   }
 }
 
@@ -48,13 +50,32 @@ export class DatabaseClient {
   constructor(ns: NS) {
     this.#ns = ns;
   }
-  #safeStringify(data: Entry | Entry[]) {
+  #safeStringify(data: Entry[]) {
     try {
       return JSON.stringify(data);
     } catch (e) {
       const error = e as Error;
       throw new JSONError(`Error while stringifying: ${error.message}`, { cause: error });
     }
+  }
+  #formatError(e: unknown): string {
+    return e instanceof Error ? e.message : `${e}`;
+  }
+  #toFilePath(hash: string) {
+    const subdir = hash.slice(0, 2);
+    return `${DB_DIRECTORY}/${subdir}/${hash}.json`;
+  }
+  #toTempPath(hash: string) {
+    return `${DB_DIRECTORY}/tmp/${hash}-${Math.random().toString(16).slice(2)}.tmp.json`;
+  }
+  #isValidData(data: unknown): data is Entry[] {
+    return Array.isArray(data)
+      && data.every(e => 
+        e != null
+        && typeof e === 'object'
+        && typeof (e as any).key === 'string'
+        && 'value' in e
+      );
   }
   #atomicWrite(tempfile: string, file: string, data: string) {
     this.#ns.write(tempfile, data, 'w');
@@ -65,57 +86,76 @@ export class DatabaseClient {
   }
   #write(key: string, data: Entry) {
     const hash = FNV1a_64(key);
-    const subdir = hash.slice(0, 2);
-    const file = `${DB_DIRECTORY}/${subdir}/${hash}.json`
-    const tempfile = `${DB_DIRECTORY}/tmp/${hash}-${Math.random().toString(16).slice(2)}.tmp.json`
-    let json: string;
-    if (this.#ns.fileExists(file)) {
-      const filedata = this.#read(hash);
-      if (!Array.isArray(filedata)) {
-        if (filedata.key === key) {
-          json = this.#safeStringify(data);
-          this.#atomicWrite(tempfile, file, json);
-          return;
-        } else {
-          json = this.#safeStringify([filedata, data]);
-          this.#atomicWrite(tempfile, file, json);
-          return;
-        }
-      }
-      const idx = filedata.findIndex(e => e.key === key);
-      if (idx !== -1) {
-        filedata[idx] = data;
-      } else {
-        filedata.push(data);
-      }
-      json = this.#safeStringify(filedata);
+    const file = this.#toFilePath(hash);
+    const tempfile = this.#toTempPath(hash);
+
+    if (!this.#ns.fileExists(file)) {
+      const json = this.#safeStringify([data]);
       this.#atomicWrite(tempfile, file, json);
       return;
     }
-    json = this.#safeStringify(data);
-    this.#atomicWrite(tempfile, file, json);
+
+    const filedata = this.#read(hash);
+    const idx = filedata.findIndex(e => e.key === key);
+    if (idx !== -1) {
+      filedata[idx] = data;
+    } else {
+      filedata.push(data);
+    }
+    this.#atomicWrite(tempfile, file, this.#safeStringify(filedata));
   }
-  #read(hash: string): Entry | Entry[] {
-    const subdir = hash.slice(0,2);
-    const file = `${DB_DIRECTORY}/${subdir}/${hash}.json`
+  #read(hash: string): Entry[] {
+    const file = this.#toFilePath(hash);
     if (!this.#ns.fileExists(file)) {
-      throw new MissingKeyError(`File not found`);
+      throw new MissingKeyError();
     }
     // ! May throw
     try {
-      const data = JSON.parse(this.#ns.read(file)) as Entry | Entry[];
+      const data = JSON.parse(this.#ns.read(file));
+      if (!this.#isValidData(data)) {
+        throw new JSONError('Invalid data format - File likely corrupted');
+      }
       return data;
     } catch (e) {
+      if (e instanceof JSONError) throw e;
       const error = e as Error;
       throw new JSONError(`Error while parsing: ${error.message}`, { cause: error });
+    }
+  }
+  #delete(key: string): boolean {
+    const hash = FNV1a_64(key);
+    const file = this.#toFilePath(hash);
+    const tempfile = this.#toTempPath(hash);
+    try {
+      const data = this.#read(hash);
+      const idx = data.findIndex(e => e.key === key);
+      if (idx !== -1) {
+        data.splice(idx, 1);
+      } else {
+        throw new MissingKeyError();
+      }
+      if (data.length === 0) {
+        this.#ns.rm(file, this.#ns.self().server);
+        return true;
+      }
+      const json = this.#safeStringify(data);
+      this.#atomicWrite(tempfile, file, json);
+      return true;
+    } catch(e) { 
+      if (e instanceof MissingKeyError) return false;
+      throw e instanceof Error ? e : new Error(`${e}`);
     }
   }
   set(key: string, value: JSONValue): boolean {
     try {
       this.#write(key, { key, value })
     } catch (e) {
-      const log = e instanceof Error ? e.message : `${e}`;
-      this.#ns.print(log);
+      if (e instanceof JSONError || e instanceof MissingKeyError) {
+        this.#ns.print(e.message);
+      } else {
+        const reason = `An unknown error occurred: ${this.#formatError(e)}`
+        this.#ns.print(reason);
+      }
       return false;
     }
     return true;
@@ -123,17 +163,11 @@ export class DatabaseClient {
   get(key: string): { state: 'missing' } | { state: 'error', reason: string } | { state: 'found', data: JSONValue} {
     try {
       const data = this.#read(FNV1a_64(key));
-      if (Array.isArray(data)) {
-        for (const entry of data) {
-          if (entry.key !== key) continue;
-          return { state: 'found', data: entry.value };
-        }
-        throw new MissingKeyError('Key not found');
+      for (const entry of data) {
+        if (entry.key !== key) continue;
+        return { state: 'found', data: entry.value };
       }
-      if (data.key !== key) {
-        throw new MissingKeyError('Key not found');
-      }
-      return { state: 'found', data: data.value };
+      throw new MissingKeyError();
     } catch (e) {
       if (e instanceof MissingKeyError) {
         this.#ns.print(`Key "${key}" missing in database`);
@@ -143,11 +177,22 @@ export class DatabaseClient {
         this.#ns.print(e.message);
         return { state: 'error', reason: e.message }
       }
-      const log = e instanceof Error ? e.message : `${e}`;
-      const reason = `An unknown Error occurred: ${log}`
+      const reason = `An unknown Error occurred: ${this.#formatError(e)}`
       this.#ns.print(reason);
       return { state: 'error', reason };
     }
   }
-  // TODO: Implement delete & keylist
+  delete(key: string): boolean {
+    try {
+      return this.#delete(key);
+    } catch (e) {
+      if (e instanceof JSONError) {
+        this.#ns.print(e.message);
+      } else {
+        this.#ns.print(`An unknown Error occurred: ${this.#formatError(e)}`);
+      }
+    }
+    return false;
+  }
+  // TODO: Implement keylist
 }

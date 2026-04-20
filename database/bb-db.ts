@@ -9,6 +9,11 @@ type JSONObject = { [key: string]: JSONValue };
 
 type Entry = { key: string, value: JSONValue };
 
+export type GetResult = 
+  | { state: 'missing' }
+  | { state: 'error'; reason: string }
+  | { state: 'found'; data: JSONValue }
+
 class MissingKeyError extends Error {
   constructor(message?: string, options?: ErrorOptions) {
     super(message, options);
@@ -213,7 +218,7 @@ export class DatabaseClient {
     }
     return true;
   }
-  get(key: string): { state: 'missing' } | { state: 'error', reason: string } | { state: 'found', data: JSONValue} {
+  get(key: string): GetResult {
     try {
       const data = this.#read(FNV1a_64(key));
       for (const entry of data) {

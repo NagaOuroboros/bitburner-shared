@@ -84,6 +84,14 @@ export class DatabaseClient {
     }
     this.#ns.mv(this.#ns.self().server, tempfile, file);
   }
+  #atomicDelete(tempfile: string, file: string) {
+    const self = this.#ns.self().server;
+    this.#ns.mv(self, file, tempfile);
+    if (!this.#ns.fileExists(tempfile)) {
+      throw new Error(`Failed to move: ${file}`);
+    }
+    this.#ns.rm(tempfile, self);
+  }
   #write(key: string, data: Entry) {
     const hash = FNV1a_64(key);
     const file = this.#toFilePath(hash);
@@ -135,7 +143,7 @@ export class DatabaseClient {
         throw new MissingKeyError();
       }
       if (data.length === 0) {
-        this.#ns.rm(file, this.#ns.self().server);
+        this.#atomicDelete(tempfile, file);
         return true;
       }
       const json = this.#safeStringify(data);

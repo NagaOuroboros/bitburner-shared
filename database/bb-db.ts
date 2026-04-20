@@ -42,15 +42,56 @@ function FNV1a_64(input: string): string {
   return hash.toString(16).toUpperCase().padStart(16, '0');
 }
 
-const DB_DIRECTORY = "bb-db";
-
 export class DatabaseClient {
-  #keylist: string[] = [];
+  static DEFAULT_DIRECTORY: string = 'local-database';
+
+  #keycache: Set<string> = new Set();
+  #directory: string;
   #ns: NS;
-  constructor(ns: NS) {
+  #self: string;
+  constructor(ns: NS, rootDir: string = DatabaseClient.DEFAULT_DIRECTORY) {
     this.#ns = ns;
+    this.#self = ns.self().server;
+    this.#directory = rootDir;
+    const files = ns.ls(this.#self)
+      .filter(f => 
+        f.startsWith(this.#directory) &&
+        f.endsWith('.json') &&
+        !f.includes('/tmp/')
+      );
+    for (const file of files) {
+      let contents: unknown;
+
+      try {
+        contents = JSON.parse(ns.read(file));
+      } catch(e) {
+        ns.print(`Failed to parse ${file}: ${this.#formatError(e)}`);
+        const temp = this.#toTempPath('init');
+        try {
+          this.#atomicDelete(temp, file);
+        } catch (e) {
+          ns.print(`Failed to delete ${file}: ${this.#formatError(e)}`);
+        }
+        continue;
+      }
+
+      if (!this.#isValidData(contents) || contents.length === 0) {
+        ns.print(`Invalid or empty file: ${file} -- deleting`);
+        const temp = this.#toTempPath('init');
+        try {
+          this.#atomicDelete(temp, file);
+        } catch (e) {
+          ns.print(`Failed to delete ${file}: ${this.#formatError(e)}`);
+        }
+        continue;
+      }
+
+      for (const entry of contents) {
+        this.#keycache.add(entry.key);
+      }
+    }
   }
-  #safeStringify(data: Entry[]) {
+  #safeStringify(data: Entry[]): string {
     try {
       return JSON.stringify(data);
     } catch (e) {
@@ -61,38 +102,38 @@ export class DatabaseClient {
   #formatError(e: unknown): string {
     return e instanceof Error ? e.message : `${e}`;
   }
-  #toFilePath(hash: string) {
+  #toFilePath(hash: string): string {
     const subdir = hash.slice(0, 2);
-    return `${DB_DIRECTORY}/${subdir}/${hash}.json`;
+    return `${this.#directory}/${subdir}/${hash}.json`;
   }
-  #toTempPath(hash: string) {
-    return `${DB_DIRECTORY}/tmp/${hash}-${Math.random().toString(16).slice(2)}.tmp.json`;
+  #toTempPath(hash: string): string {
+    return `${this.#directory}/tmp/${hash}-${Math.random().toString(16).slice(2)}.tmp.json`;
   }
   #isValidData(data: unknown): data is Entry[] {
     return Array.isArray(data)
       && data.every(e => 
-        e != null
-        && typeof e === 'object'
-        && typeof (e as any).key === 'string'
-        && 'value' in e
+        e != null &&
+        typeof e === 'object' &&
+        typeof (e as any).key === 'string' &&
+        'value' in e &&
+        (e as any).value !== undefined
       );
   }
-  #atomicWrite(tempfile: string, file: string, data: string) {
+  #atomicWrite(tempfile: string, file: string, data: string): void {
     this.#ns.write(tempfile, data, 'w');
     if (!this.#ns.fileExists(tempfile)) {
       throw new Error(`Failed to write: ${tempfile}`);
     }
-    this.#ns.mv(this.#ns.self().server, tempfile, file);
+    this.#ns.mv(this.#self, tempfile, file);
   }
-  #atomicDelete(tempfile: string, file: string) {
-    const self = this.#ns.self().server;
-    this.#ns.mv(self, file, tempfile);
+  #atomicDelete(tempfile: string, file: string): void {
+    this.#ns.mv(this.#self, file, tempfile);
     if (!this.#ns.fileExists(tempfile)) {
       throw new Error(`Failed to move: ${file}`);
     }
-    this.#ns.rm(tempfile, self);
+    this.#ns.rm(tempfile, this.#self);
   }
-  #write(key: string, data: Entry) {
+  #write(key: string, data: Entry): void {
     const hash = FNV1a_64(key);
     const file = this.#toFilePath(hash);
     const tempfile = this.#toTempPath(hash);
@@ -100,6 +141,7 @@ export class DatabaseClient {
     if (!this.#ns.fileExists(file)) {
       const json = this.#safeStringify([data]);
       this.#atomicWrite(tempfile, file, json);
+      this.#keycache.add(key);
       return;
     }
 
@@ -111,6 +153,7 @@ export class DatabaseClient {
       filedata.push(data);
     }
     this.#atomicWrite(tempfile, file, this.#safeStringify(filedata));
+    this.#keycache.add(key);
   }
   #read(hash: string): Entry[] {
     const file = this.#toFilePath(hash);
@@ -144,10 +187,12 @@ export class DatabaseClient {
       }
       if (data.length === 0) {
         this.#atomicDelete(tempfile, file);
+        this.#keycache.delete(key);
         return true;
       }
       const json = this.#safeStringify(data);
       this.#atomicWrite(tempfile, file, json);
+      this.#keycache.delete(key);
       return true;
     } catch(e) { 
       if (e instanceof MissingKeyError) return false;
@@ -173,11 +218,13 @@ export class DatabaseClient {
       const data = this.#read(FNV1a_64(key));
       for (const entry of data) {
         if (entry.key !== key) continue;
+        this.#keycache.add(key);
         return { state: 'found', data: entry.value };
       }
       throw new MissingKeyError();
     } catch (e) {
       if (e instanceof MissingKeyError) {
+        this.#keycache.delete(key);
         this.#ns.print(`Key "${key}" missing in database`);
         return { state: 'missing' }
       }
@@ -202,5 +249,20 @@ export class DatabaseClient {
     }
     return false;
   }
-  // TODO: Implement keylist
+  has(key: string): boolean {
+    if(this.#keycache.has(key)) return true;
+
+    try {
+      const data = this.#read(FNV1a_64(key));
+      const found = data.some(e => e.key === key);
+      if (found) this.#keycache.add(key);
+      return found;
+    } catch (e) {
+      this.#keycache.delete(key);
+      return false;
+    }
+  }
+  keys(): string[] {
+    return [...this.#keycache];
+  }
 }

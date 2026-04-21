@@ -242,6 +242,25 @@ export class DatabaseClient {
       return { state: 'error', reason };
     }
   }
+  getOrNull(key: string): JSONValue | null {
+    const result = this.get(key);
+    if (result.state === 'found') return result.data;
+    return null;
+  }
+  getOrThrow(key: string): JSONValue {
+    const result = this.get(key);
+    if (result.state === 'found') return result.data;
+    throw new Error(
+      result.state === 'error'
+        ? result.reason
+        : `Key "${key}" not found`
+    );
+  }
+  getOrDefault(key: string, fallback: JSONValue): JSONValue {
+    const result = this.get(key);
+    if (result.state === 'found') return result.data;
+    return fallback;
+  }
   delete(key: string): boolean {
     try {
       return this.#delete(key);
